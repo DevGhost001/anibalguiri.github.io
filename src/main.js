@@ -111,17 +111,6 @@ const submitText = document.getElementById('submit-text');
 const successMsg = document.getElementById('form-success');
 const errorMsg = document.getElementById('form-error');
 
-// ── EmailJS Config ──────────────────────────────────────
-// TODO: Substitua pelas suas credenciais do EmailJS
-const EMAILJS_PUBLIC_KEY = 'YOUR_PUBLIC_KEY';
-const EMAILJS_SERVICE_ID = 'YOUR_SERVICE_ID';
-const EMAILJS_TEMPLATE_ID = 'YOUR_TEMPLATE_ID';
-
-// Inicializar EmailJS
-if (typeof emailjs !== 'undefined') {
-  emailjs.init(EMAILJS_PUBLIC_KEY);
-}
-
 // ── Validation Helpers ──────────────────────────────────
 const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 
@@ -227,37 +216,32 @@ form?.addEventListener('submit', async (e) => {
   submitText.textContent = 'A enviar...';
 
   try {
-    // Enviar email real via EmailJS
-    if (typeof emailjs !== 'undefined' && EMAILJS_PUBLIC_KEY !== 'YOUR_PUBLIC_KEY') {
-      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-        from_name: document.getElementById('field-name').value.trim(),
-        from_email: document.getElementById('field-email').value.trim(),
-        subject: document.getElementById('field-subject').value.trim(),
-        contact_type: document.getElementById('field-type').value,
-        message: document.getElementById('field-msg').value.trim(),
+    // Enviar via FormSubmit AJAX (sem recarregar a página)
+    const response = await fetch(form.action, {
+      method: 'POST',
+      body: new FormData(form),
+      headers: { 'Accept': 'application/json' }
+    });
+
+    const result = await response.json();
+
+    if (result.success === 'true' || result.success === true) {
+      // Sucesso — limpar formulário e estados
+      form.reset();
+      ['field-name', 'field-email', 'field-subject', 'field-msg'].forEach(id => {
+        document.getElementById(id)?.classList.remove('valid', 'invalid');
       });
+      ['name-error', 'email-error', 'subject-error', 'msg-error'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.textContent = ''; el.classList.remove('visible'); }
+      });
+      successMsg.classList.add('show');
+      setTimeout(() => { successMsg.classList.remove('show'); }, 7000);
     } else {
-      // Fallback: simular envio se EmailJS não estiver configurado
-      console.warn('EmailJS não configurado. Simulando envio...');
-      await new Promise(r => setTimeout(r, 1500));
+      throw new Error('FormSubmit devolveu falha');
     }
-
-    // Sucesso
-    form.reset();
-    // Limpar estados visuais de validação
-    ['field-name', 'field-email', 'field-subject', 'field-msg'].forEach(id => {
-      const el = document.getElementById(id);
-      el?.classList.remove('valid', 'invalid');
-    });
-    ['name-error', 'email-error', 'subject-error', 'msg-error'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) { el.textContent = ''; el.classList.remove('visible'); }
-    });
-
-    successMsg.classList.add('show');
-    setTimeout(() => { successMsg.classList.remove('show'); }, 7000);
   } catch (err) {
-    console.error('Erro ao enviar email:', err);
+    console.error('Erro ao enviar:', err);
     errorMsg.classList.add('show');
     setTimeout(() => { errorMsg.classList.remove('show'); }, 7000);
   } finally {
@@ -265,3 +249,4 @@ form?.addEventListener('submit', async (e) => {
     submitText.textContent = 'Enviar Mensagem';
   }
 });
+
