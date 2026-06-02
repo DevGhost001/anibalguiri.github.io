@@ -109,21 +109,159 @@ filterBtns.forEach(btn => {
 const form = document.getElementById('contact-form');
 const submitText = document.getElementById('submit-text');
 const successMsg = document.getElementById('form-success');
+const errorMsg = document.getElementById('form-error');
+
+// ── EmailJS Config ──────────────────────────────────────
+// TODO: Substitua pelas suas credenciais do EmailJS
+const EMAILJS_PUBLIC_KEY = 'YOUR_PUBLIC_KEY';
+const EMAILJS_SERVICE_ID = 'YOUR_SERVICE_ID';
+const EMAILJS_TEMPLATE_ID = 'YOUR_TEMPLATE_ID';
+
+// Inicializar EmailJS
+if (typeof emailjs !== 'undefined') {
+  emailjs.init(EMAILJS_PUBLIC_KEY);
+}
+
+// ── Validation Helpers ──────────────────────────────────
+const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+
+function showError(inputId, errorId, message) {
+  const input = document.getElementById(inputId);
+  const error = document.getElementById(errorId);
+  if (!input || !error) return;
+  input.classList.add('invalid');
+  input.classList.remove('valid');
+  error.textContent = message;
+  error.classList.add('visible');
+}
+
+function showValid(inputId, errorId) {
+  const input = document.getElementById(inputId);
+  const error = document.getElementById(errorId);
+  if (!input || !error) return;
+  input.classList.remove('invalid');
+  input.classList.add('valid');
+  error.textContent = '';
+  error.classList.remove('visible');
+}
+
+function clearState(inputId, errorId) {
+  const input = document.getElementById(inputId);
+  const error = document.getElementById(errorId);
+  if (!input || !error) return;
+  input.classList.remove('invalid', 'valid');
+  error.textContent = '';
+  error.classList.remove('visible');
+}
+
+// ── Real-time Email Validation ──────────────────────────
+const emailField = document.getElementById('field-email');
+emailField?.addEventListener('input', () => {
+  const val = emailField.value.trim();
+  if (val === '') {
+    clearState('field-email', 'email-error');
+  } else if (!emailRegex.test(val)) {
+    showError('field-email', 'email-error', '⚠ Formato de email inválido');
+  } else {
+    showValid('field-email', 'email-error');
+  }
+});
+
+// ── Real-time Required Field Validation ─────────────────
+function setupRequiredValidation(inputId, errorId, label) {
+  const field = document.getElementById(inputId);
+  field?.addEventListener('input', () => {
+    const val = field.value.trim();
+    if (val === '') {
+      clearState(inputId, errorId);
+    } else if (val.length < 2) {
+      showError(inputId, errorId, `⚠ ${label} é muito curto`);
+    } else {
+      showValid(inputId, errorId);
+    }
+  });
+}
+setupRequiredValidation('field-name', 'name-error', 'Nome');
+setupRequiredValidation('field-subject', 'subject-error', 'Assunto');
+setupRequiredValidation('field-msg', 'msg-error', 'Mensagem');
+
+// ── Form Submit ─────────────────────────────────────────
+function validateAll() {
+  let valid = true;
+  const name = document.getElementById('field-name').value.trim();
+  const email = document.getElementById('field-email').value.trim();
+  const subject = document.getElementById('field-subject').value.trim();
+  const msg = document.getElementById('field-msg').value.trim();
+
+  if (!name || name.length < 2) {
+    showError('field-name', 'name-error', '⚠ Por favor, insira o seu nome');
+    valid = false;
+  }
+  if (!email) {
+    showError('field-email', 'email-error', '⚠ Por favor, insira o seu email');
+    valid = false;
+  } else if (!emailRegex.test(email)) {
+    showError('field-email', 'email-error', '⚠ Formato de email inválido');
+    valid = false;
+  }
+  if (!subject || subject.length < 2) {
+    showError('field-subject', 'subject-error', '⚠ Por favor, insira o assunto');
+    valid = false;
+  }
+  if (!msg || msg.length < 2) {
+    showError('field-msg', 'msg-error', '⚠ Por favor, escreva a sua mensagem');
+    valid = false;
+  }
+  return valid;
+}
 
 form?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const name = form.querySelector('#field-name').value.trim();
-  const email = form.querySelector('#field-email').value.trim();
-  const msg = form.querySelector('#field-msg').value.trim();
-  if (!name || !email || !msg) return;
+  successMsg.classList.remove('show');
+  errorMsg.classList.remove('show');
+
+  if (!validateAll()) return;
 
   const btn = document.getElementById('submit-contact');
   btn.disabled = true;
   submitText.textContent = 'A enviar...';
-  await new Promise(r => setTimeout(r, 1500));
-  form.reset();
-  btn.disabled = false;
-  submitText.textContent = 'Enviar Mensagem';
-  successMsg.hidden = false;
-  setTimeout(() => { successMsg.hidden = true; }, 6000);
+
+  try {
+    // Enviar email real via EmailJS
+    if (typeof emailjs !== 'undefined' && EMAILJS_PUBLIC_KEY !== 'YOUR_PUBLIC_KEY') {
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        from_name: document.getElementById('field-name').value.trim(),
+        from_email: document.getElementById('field-email').value.trim(),
+        subject: document.getElementById('field-subject').value.trim(),
+        contact_type: document.getElementById('field-type').value,
+        message: document.getElementById('field-msg').value.trim(),
+      });
+    } else {
+      // Fallback: simular envio se EmailJS não estiver configurado
+      console.warn('EmailJS não configurado. Simulando envio...');
+      await new Promise(r => setTimeout(r, 1500));
+    }
+
+    // Sucesso
+    form.reset();
+    // Limpar estados visuais de validação
+    ['field-name', 'field-email', 'field-subject', 'field-msg'].forEach(id => {
+      const el = document.getElementById(id);
+      el?.classList.remove('valid', 'invalid');
+    });
+    ['name-error', 'email-error', 'subject-error', 'msg-error'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.textContent = ''; el.classList.remove('visible'); }
+    });
+
+    successMsg.classList.add('show');
+    setTimeout(() => { successMsg.classList.remove('show'); }, 7000);
+  } catch (err) {
+    console.error('Erro ao enviar email:', err);
+    errorMsg.classList.add('show');
+    setTimeout(() => { errorMsg.classList.remove('show'); }, 7000);
+  } finally {
+    btn.disabled = false;
+    submitText.textContent = 'Enviar Mensagem';
+  }
 });

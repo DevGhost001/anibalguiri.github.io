@@ -835,8 +835,53 @@ select {
 select:focus { border-color: var(--neon-green); box-shadow: 0 0 0 3px rgba(0,255,157,0.1); }
 select option { background: var(--bg-700); }
 .btn-full { width: 100%; justify-content: center; padding: 0.9rem; }
+/* ── FIELD VALIDATION ────────────────────────────────────── */
+.field-error {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: #ff4d6a;
+  margin-top: 0.35rem;
+  min-height: 1.1em;
+  letter-spacing: 0.5px;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.field-error.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+input.invalid, textarea.invalid {
+  border-color: #ff4d6a !important;
+  box-shadow: 0 0 0 3px rgba(255, 77, 106, 0.12) !important;
+}
+input.valid, textarea.valid {
+  border-color: var(--neon-green) !important;
+  box-shadow: 0 0 0 3px rgba(0, 255, 157, 0.1) !important;
+}
+
+/* ── SUCCESS / ERROR MESSAGES ────────────────────────────── */
+@keyframes successSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes glowPulseSuccess {
+  0%, 100% { box-shadow: 0 0 8px rgba(0,255,157,0.15), 0 0 20px rgba(0,255,157,0.05); }
+  50% { box-shadow: 0 0 16px rgba(0,255,157,0.35), 0 0 40px rgba(0,255,157,0.12); }
+}
 .form-success {
-  display: flex;
+  display: none;
   align-items: center;
   gap: 0.75rem;
   margin-top: 1rem;
@@ -847,7 +892,27 @@ select option { background: var(--bg-700); }
   font-size: 0.88rem;
   color: var(--neon-green);
 }
-.form-success[hidden] { display: none; }
+.form-success.show {
+  display: flex;
+  animation: successSlideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+             glowPulseSuccess 2s ease-in-out 0.6s infinite;
+}
+.form-error {
+  display: none;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  background: rgba(255, 77, 106, 0.06);
+  border: 1px solid rgba(255, 77, 106, 0.25);
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  color: #ff4d6a;
+}
+.form-error.show {
+  display: flex;
+  animation: successSlideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
 #contact .section-label, #contact .section-title, #contact .section-divider {
   padding: 0 2rem;
 }
